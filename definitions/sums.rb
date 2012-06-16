@@ -1,14 +1,23 @@
-module Sums
-=begin
-  in laTeX:
-  $\sum_{i=low_val}^high_val method$
-  method is a proc.
-  examples:
-    sigma(1, 5, ->(i) { i }) = 1+2+3+4+5 = 15
-=end
-  def sigma(low_int, high_int, method) 
+class Sums
+  attr_accessor :low, :high, :expression
+
+  def initialize(low, high, expression)
+    @low = low
+    @high = high
+    @expression = expression
+  end
+
+  def to_latex
+    "$#{'\s'}um_{i=#{@low}}^#{@high} #{@expression}$"
+  end
+
+  def evaluate
     sum = 0
-    (low_int..high_int).each { |i| sum += method.call(i) } #figure out argument error
+    (@low..@high).each { |i| sum += @expression.call(i) }
     sum
+  end
+
+  def self.required_arguments
+    {low: :integer, high: :integer, expression: :proc}
   end
 end
