@@ -4,17 +4,28 @@ class Summation
   def initialize(low, high, expression)
     @low = low
     @high = high
-    @expression = expression
-  end
-
-  def to_latex
-    iterator = @expression.parameters[0][1]
-    "$#{'\s'}um_{#{iterator}=#{@low}}^#{@high} #{@expression}$"
+    @expression = initialize_expression(expression)
   end
 
   def evaluate
-    sum = 0
-    (@low..@high).each { |i| sum += @expression.call(i) }
-    sum
+    sum = { @low - 1 => proc {0} } # whacky hash eliminates whacky closure madness.
+    (@low..@high).each do |i|
+      sum[i] = proc do |k|
+        sum[i-1].curry[k] + @expression.curry[i, k]
+      end
+    end
+    begin
+      sum[@high].call
+    rescue TypeError
+      sum[@high]
+    end
+  end
+
+  private
+
+  def initialize_expression(expression)
+    expression.respond_to?(:call) ? expression : proc { |i| expression }
   end
 end
+
+#\sum_{a=1}^{5}(\sum_{i=1}^{5}i+a)
