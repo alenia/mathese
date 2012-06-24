@@ -72,26 +72,34 @@ describe Summation do
     end
 
     context 'when the expression passed in is a proc with multiple arguments' do
-      let(:expression) { proc { |a,b| a + b } }
+      let(:expression) { proc { |a,b| 2*a + 3*b } }
 
       it 'should set the expression to the passed in proc' do
         subject.expression.should == expression
       end
 
-      # TODO: assertain that the parameter is correct.
       describe 'evaluate' do
         subject{ Summation.new(low, high, expression).evaluate }
 
         it 'should return a proc with the correct arguments' do
           subject.class.should == Proc
           subject.parameters.length.should == 1
-          #subject.parameters[0][1].should == :b
         end
         it 'should be the result of the expression' do
-          subject.call(0).should == 15
-          subject.call(1).should == 20
+          subject.call(0).should == 30
+          subject.call(1).should == 45
         end
       end
+    end
+  end
+
+  context 'sums of sums' do
+    let(:first_sum){ Summation.new(1,5,proc{|a,b| 2*a + 3*b}).evaluate }
+    let(:second_sum){ Summation.new(3,6,first_sum) }
+
+    it 'should evaluate properly' do
+      second_sum.evaluate.should == first_sum.call(3)+first_sum.call(4)+first_sum.call(5)+first_sum.call(6)
+      second_sum.evaluate.should == 75 + 90 + 105 + 120
     end
   end
 end
