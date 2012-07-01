@@ -1,41 +1,5 @@
 require 'summation'
 
-describe 'lemma/spike' do
-  describe 'looping' do
-    let(:ev_proc) { proc{ |a, b| 2*a + 3*b } }
-    let(:sum1) { proc{ |k| proc{0}.curry[k] + ev_proc.curry[1, k] } }
-    let(:sum2) { proc{ |k| sum1.curry[k] + ev_proc.curry[2,k] } }
-    let(:sum3) { proc{ |k| sum2.curry[k] + ev_proc.curry[3,k] } }
-
-    it 'should eval sum1' do
-      sum1.call(0).should == 0 + 2*1 + 3*0
-      sum1.call(1).should == 0 + 2*1 + 3*1
-      sum1.call(2).should == 0 + 2*1 + 3*2
-    end
-
-    it 'should eval sum2' do
-      sum2.call(0).should == 0 + (2*1 + 3*0) + (2*2 + 3*0)
-      sum2.call(1).should == 0 + (2*1 + 3*1) + (2*2 + 3*1)
-      sum2.call(2).should == 0 + (2*1 + 3*2) + (2*2 + 3*2)
-    end
-
-    it 'should eval sum3' do
-      sum3.call(0).should == 0 + (2*1 + 3*0) + (2*2 + 3*0) + (2*3 + 3*0)
-      sum3.call(1).should == 0 + (2*1 + 3*1) + (2*2 + 3*1) + (2*3 + 3*1)
-      sum3.call(2).should == 0 + (2*1 + 3*2) + (2*2 + 3*2) + (2*3 + 3*2)
-    end
-  end
-
-  describe 'proc of procs' do
-    let(:thing) { proc{|k| (proc{|i| 2*i}).curry[k] +(proc{|i| 3*i}).curry[1, k]} }
-
-    it 'should turn into a number' do
-      thing.curry[1].should == 2 + 3
-      proc{thing.curry[1]}.curry[].should == 2 + 3
-    end
-  end
-end
-
 describe Summation do
   subject do
     Summation.new(low, high, expression)
@@ -52,6 +16,12 @@ describe Summation do
         subject.expression.should == expression
       end
 
+      it 'should set the high value to a proc with one argument' do
+        subject.high.class.should == Proc
+        subject.high.parameters.length.should == 1
+        subject.high.call.should == 5
+      end
+
       it 'evaluate should return an integer that is the result of the sum' do
         subject.evaluate.should == 15
       end
@@ -64,6 +34,7 @@ describe Summation do
         subject.expression.class.should == Proc
         subject.expression.parameters.length.should == 1
         subject.expression.parameters[0][1].should == :i
+        subject.expression.call.should == 1
       end
 
       it 'evaluate should return an integer that is the result of the sum' do
@@ -93,13 +64,27 @@ describe Summation do
     end
   end
 
+  context 'when a proc is passed in for high' do
+    let(:low) { 1 }
+    let(:high) { proc { |x| x } }
+
+    context 'when an integer is passed in for the expression' do
+      let(:expression) { 5 }
+      it 'should return a proc that evaluates to the result of the sum for a passed in argument' do
+        subject.evaluate.call(1).should == 5
+        subject.evaluate.call(4).should == 20
+        subject.evaluate.call(10).should == 50
+      end
+    end
+  end
+
   context 'sums of sums' do
-    let(:first_sum){ Summation.new(1,5,proc{|a,b| 2*a + 3*b}).evaluate }
-    let(:second_sum){ Summation.new(3,6,first_sum) }
+    let(:inner_sum){ Summation.new(1,5,proc{|a,b| 2*a + 3*b}).evaluate }
+    let(:outer_sum){ Summation.new(3,6,inner_sum) }
 
     it 'should evaluate properly' do
-      second_sum.evaluate.should == first_sum.call(3)+first_sum.call(4)+first_sum.call(5)+first_sum.call(6)
-      second_sum.evaluate.should == 75 + 90 + 105 + 120
+      outer_sum.evaluate.should == inner_sum.call(3)+inner_sum.call(4)+inner_sum.call(5)+inner_sum.call(6)
+      outer_sum.evaluate.should == 75 + 90 + 105 + 120
     end
   end
 end
